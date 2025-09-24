@@ -197,66 +197,23 @@
 - **Read-Behind**: Async fetch from DB on cache miss
 - **Read-Once**: Read from cache only, no DB fallback
 
-### 2.7 Database Selection Guide
+### 2.7 Database Selection Summary
 
 #### Default Choice
 > **Always prefer PostgreSQL** - it can handle most use cases effectively
 
-#### Selection Criteria
+#### Quick Selection Criteria
 1. **Data Structure**: Clear and consistent structure
-2. **Query Patterns**: Type and frequency of queries
+2. **Query Patterns**: Type and frequency of queries  
 3. **Scale Requirements**: Read/write volume and performance needs
-
-#### Database Types by Use Case
-
-##### Relational Databases (PostgreSQL)
-- **Use When**: 
-  - Clear structured data
-  - ACID guarantees needed (payments, inventory)
-  - Complex relationships and joins
-
-##### Document Databases (MongoDB, CouchBase)
-- **Use When**: 
-  - Unstructured data with varying fields
-  - Dynamic query patterns
-  - Flexible schema requirements
-
-##### Columnar Databases (Cassandra, ClickHouse)
-- **Use When**: 
-  - Ever-increasing data volume
-  - Limited/finite query patterns
-  - OLAP workloads
-
-##### Search Engines (Elasticsearch)
-- **Use When**: 
-  - Text search with fuzzy matching
-  - Full-text search capabilities
-  - Built on Apache Lucene
-- **Note**: Use as secondary data source, not primary
-
-##### Time-Series Databases (InfluxDB, TimescaleDB)
-- **Use When**: 
-  - Append-only, write-heavy workloads
-  - Bulk range queries
-  - Sequential writes without updates
-
-##### File Storage (S3, CDN)
-- **S3**: Use pre-signed URLs for uploads
-- **CDN**: Global asset distribution
-
-##### Analytics (Hadoop)
-- **Use When**: 
-  - Large dataset analytics
-  - Report generation
-  - Offline processing
 
 #### OLAP vs OLTP
 - **OLAP (Online Analytical Processing)**: Analytics, reporting, read-heavy
-- **OLTP (Online Transaction Processing)**: PostgreSQL, MongoDB (ACID compliant)
+  - **Examples**: ClickHouse, BigQuery, Snowflake
+- **OLTP (Online Transaction Processing)**: Real-time transactions, ACID compliant
+  - **Examples**: PostgreSQL, MySQL, MongoDB
 
-#### Real-World Example
-- **Inventory Management**: Strong consistency → RDBMS (PostgreSQL)
-- **Historical Orders**: Eventually consistent → Cassandra
+> **For detailed database comparisons, selection frameworks, and architecture patterns, see Section 4**
 
 ## 3. API Design
 *Topics to be covered:*
@@ -267,13 +224,193 @@
 - [ ] Observability: logging, metrics, tracing
 - [ ] Backpressure & graceful degradation
 
-## 4. Database Comparisons
-*Topics to be covered:*
-- [ ] PostgreSQL: ACID, joins, strong consistency, OLTP workloads
-- [ ] MongoDB: document store, flexible schema, hierarchical data
-- [ ] Cassandra: wide-column, linear horizontal scaling, eventual consistency
-- [ ] Elasticsearch: full-text search, analytics, near real-time indexing
-- [ ] Compare scalability, read/write patterns, consistency, indexing options
+## 4. Database Comparisons ✅
+
+### 4.1 Database Types by Use Case
+
+#### Relational Databases (PostgreSQL, MySQL)
+- **Data Model**: Tables with rows and columns, strict schema
+- **Consistency**: ACID compliant, strong consistency
+- **Scalability**: Vertical scaling primarily, read replicas for horizontal read scaling
+- **Query Patterns**: Complex joins, transactions, SQL queries
+- **Indexing**: B-tree indexes, composite indexes, partial indexes
+- **Use When**: 
+  - Clear structured data
+  - ACID guarantees needed (payments, inventory)
+  - Complex relationships and joins
+  - Strong consistency requirements
+- **Examples**: User management, financial transactions, inventory systems
+
+#### Document Databases (MongoDB, CouchBase)
+- **Data Model**: JSON-like documents, flexible schema
+- **Consistency**: Configurable (strong to eventual)
+- **Scalability**: Horizontal scaling via sharding
+- **Query Patterns**: Document queries, aggregation pipelines
+- **Indexing**: Compound indexes, text indexes, geospatial indexes
+- **Use When**: 
+  - Unstructured data with varying fields
+  - Dynamic query patterns
+  - Flexible schema requirements
+  - Rapid prototyping needs
+- **Examples**: Content management, user profiles, product catalogs
+
+#### Wide-Column Databases (Cassandra, HBase)
+- **Data Model**: Column families, denormalized data
+- **Consistency**: Tunable consistency (eventual by default)
+- **Scalability**: Linear horizontal scaling, multi-datacenter
+- **Query Patterns**: Simple queries by partition key, limited joins
+- **Indexing**: Partition key indexing, secondary indexes (limited)
+- **Use When**: 
+  - Ever-increasing data volume (time-series, IoT)
+  - High write throughput requirements
+  - Limited/finite query patterns
+  - Multi-region deployments
+- **Examples**: Time-series data, IoT sensors, messaging systems
+
+#### Search Engines (Elasticsearch, Solr)
+- **Data Model**: Inverted indexes, JSON documents
+- **Consistency**: Near real-time, eventually consistent
+- **Scalability**: Horizontal scaling via sharding
+- **Query Patterns**: Full-text search, aggregations, analytics
+- **Indexing**: Inverted indexes, analyzer-based tokenization
+- **Use When**: 
+  - Text search with fuzzy matching
+  - Full-text search capabilities
+  - Real-time analytics and aggregations
+  - Log analysis and monitoring
+- **Note**: Use as secondary data source, not primary
+- **Examples**: Search functionality, log analysis, content discovery
+
+#### Time-Series Databases (InfluxDB, TimescaleDB)
+- **Data Model**: Time-stamped data points, tags and fields
+- **Consistency**: Strong consistency for writes, configurable for reads
+- **Scalability**: Time-based partitioning, retention policies
+- **Query Patterns**: Time-range queries, aggregations over time windows
+- **Indexing**: Time-based indexes, tag indexes
+- **Use When**: 
+  - Append-only, write-heavy workloads
+  - Bulk range queries over time periods
+  - Sequential writes without updates
+  - Monitoring and observability data
+- **Examples**: Metrics monitoring, IoT data, financial tick data
+
+#### Key-Value Stores (Redis, DynamoDB)
+- **Data Model**: Simple key-value pairs, some support data structures
+- **Consistency**: Configurable (Redis: strong, DynamoDB: eventual/strong)
+- **Scalability**: Horizontal scaling (DynamoDB), clustering (Redis)
+- **Query Patterns**: Simple key lookups, limited range queries
+- **Indexing**: Hash-based, some support secondary indexes
+- **Use When**: 
+  - Simple key-based access patterns
+  - High-performance caching
+  - Session management
+  - Real-time recommendations
+- **Examples**: User sessions, caching layer, leaderboards
+
+#### Graph Databases (Neo4j, Amazon Neptune)
+- **Data Model**: Nodes and relationships, property graphs
+- **Consistency**: ACID compliant (Neo4j), eventual (Neptune)
+- **Scalability**: Limited horizontal scaling, read replicas
+- **Query Patterns**: Graph traversals, relationship queries
+- **Indexing**: Node/relationship property indexes
+- **Use When**: 
+  - Complex relationship modeling
+  - Graph traversal queries
+  - Social networks, recommendation engines
+  - Fraud detection patterns
+- **Examples**: Social networks, recommendation systems, knowledge graphs
+
+### 4.2 Comprehensive Database Comparison Table
+
+| Database | Type | Consistency | Scalability | Query Flexibility | Best For |
+|----------|------|-------------|-------------|------------------|----------|
+| **PostgreSQL** | Relational | ACID Strong | Vertical + Read Replicas | SQL, Complex Joins | OLTP, Complex Queries |
+| **MongoDB** | Document | Configurable | Horizontal Sharding | Flexible, Aggregation | Flexible Schema, Rapid Dev |
+| **Cassandra** | Wide-Column | Eventual | Linear Horizontal | Limited, CQL | High Write Volume, IoT |
+| **Elasticsearch** | Search | Near Real-time | Horizontal | Full-text, Analytics | Search, Log Analysis |
+| **Redis** | Key-Value | Strong | Clustering | Key-based, Lua | Caching, Real-time |
+| **DynamoDB** | Key-Value | Configurable | Auto-scaling | Key/Index-based | Serverless, AWS Native |
+| **InfluxDB** | Time-Series | Strong Writes | Time Partitioning | Time-based Queries | Metrics, Monitoring |
+| **Neo4j** | Graph | ACID Strong | Limited | Graph Traversal | Relationships, Social |
+
+### 4.3 Performance Characteristics
+
+#### Read/Write Patterns
+- **Read-Heavy**: PostgreSQL (with replicas), MongoDB, Elasticsearch
+- **Write-Heavy**: Cassandra, InfluxDB, DynamoDB
+- **Balanced**: PostgreSQL, MongoDB
+- **Analytics**: Elasticsearch, ClickHouse, BigQuery
+
+#### Latency Expectations
+- **Sub-millisecond**: Redis, DynamoDB (single-digit ms)
+- **Low Latency**: PostgreSQL, MongoDB (< 10ms)
+- **Moderate**: Cassandra, Elasticsearch (10-100ms)
+- **High Latency OK**: Data warehouses, batch analytics
+
+### 4.4 Quick Decision Framework
+
+#### By Data Structure
+- **Structured + Relationships** → PostgreSQL
+- **Semi-structured + Flexible** → MongoDB  
+- **Key-Value + High Performance** → Redis/DynamoDB
+- **Time-Series + High Writes** → InfluxDB/TimescaleDB
+- **Graph + Relationships** → Neo4j
+- **Search + Analytics** → Elasticsearch
+
+#### By Scale Requirements
+- **< 1M records** → PostgreSQL (any type)
+- **1M - 100M records** → PostgreSQL, MongoDB, Redis
+- **100M - 1B records** → MongoDB, Cassandra, DynamoDB
+- **> 1B records** → Cassandra, DynamoDB, ClickHouse
+
+#### By Consistency Requirements
+- **Strong Consistency Required** → PostgreSQL, Redis, Neo4j
+- **Eventual Consistency Acceptable** → Cassandra, DynamoDB, Elasticsearch
+- **Configurable** → MongoDB (read/write concerns)
+
+### 4.5 Multi-Database Architecture Patterns
+
+#### Polyglot Persistence
+Use multiple databases optimized for different data patterns:
+- **Primary OLTP**: PostgreSQL
+- **Caching**: Redis
+- **Search**: Elasticsearch  
+- **Analytics**: ClickHouse
+- **Time-Series**: InfluxDB
+
+#### Real-World Architecture Examples
+
+##### E-commerce Platform
+```
+User Action → PostgreSQL (orders, payments)
+           → Redis (cart state, sessions)
+           → Elasticsearch (product search)
+           → InfluxDB (analytics events)
+```
+
+##### Social Media Platform
+```
+User Posts → Cassandra (posts, timeline)
+          → Neo4j (social graph, relationships)  
+          → Redis (real-time features, notifications)
+          → Elasticsearch (content search)
+```
+
+##### IoT Platform
+```
+Sensor Data → InfluxDB (time-series metrics)
+           → PostgreSQL (device metadata, users)
+           → Elasticsearch (log analysis, alerting)
+           → Redis (real-time dashboards)
+```
+
+##### Financial System
+```
+Transactions → PostgreSQL (core transactions, ACID)
+            → Redis (fraud detection cache, sessions)
+            → ClickHouse (analytics, reporting)
+            → Elasticsearch (audit logs, compliance)
+```
 
 ## 5. Transactions & Concurrency
 *Topics to be covered:*
@@ -288,7 +425,7 @@
 - [ ] Kafka architecture: brokers, partitions, consumer groups, replication
 - [ ] Delivery semantics: at-most-once, at-least-once, exactly-once
 - [ ] Message queue patterns vs streaming vs pub/sub
-- [ ] Pulsar / RabbitMQ comparisons
+- [ ] Kafka/ Pulsar / RabbitMQ comparisons
 - [ ] Failure handling, retries, backpressure
 
 ## 7. API & Communication Patterns ✅
@@ -465,7 +602,7 @@
 - [x] **HLD Foundations** - Complete
 - [x] **Database Design** - Complete
 - [ ] **API Design** - Pending
-- [ ] **Database Comparisons** - Pending
+- [x] **Database Comparisons** - Complete
 - [ ] **Transactions & Concurrency** - Pending
 - [ ] **Messaging / Event Systems** - Pending
 - [x] **API & Communication Patterns** - Complete
