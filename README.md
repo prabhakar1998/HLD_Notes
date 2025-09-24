@@ -1,11 +1,108 @@
 # HLD Prep Checklist (Senior SDE / FAANG Focus)
 
-## 1. HLD Foundations
-- [ ] Understand requirements gathering (functional + non-functional)
-- [ ] Define scale targets (QPS, latency, storage)
-- [ ] Identify trade-offs: performance vs consistency vs cost
-- [ ] Be able to draw system components and data flow
-- [ ] Explain failure scenarios and mitigation
+## 1. HLD Foundations ✅
+
+### 1.1 Requirements Gathering
+
+> **Always start with clarification questions** and align on CAP theorem trade-offs
+
+#### Functional Requirements
+- **Definition**: What the system needs to do
+- **Format**: "User should be able to..." statements
+- **Example**: URL shortener → User should be able to submit a long URL and get a shortened URL
+
+#### Non-Functional Requirements
+- **Scalability**: QPS (Queries Per Second), DAU (Daily Active Users), MAU (Monthly Active Users)
+- **Durability**: Data persistence guarantees
+- **Availability/Consistency**: Trade-offs under CAP theorem
+- **Latency**: Response time expectations
+- **Reliability**: SLA requirements
+- **Load Patterns**: Write/read ratio analysis
+
+### 1.2 Scale Estimation
+
+#### Key Metrics to Calculate
+- **Daily Active Users (DAU)**
+- **Total read/write operations per second**
+- **Storage requirements**
+- **Bandwidth requirements**
+
+#### Quick Estimation Framework
+1. Start with user base size
+2. Calculate daily operations per user
+3. Convert to QPS (operations/day ÷ 86400)
+4. Apply peak traffic multiplier (usually 2-5x)
+
+### 1.3 System Trade-offs Analysis
+
+#### Consistency Spectrum
+- **Strong Consistency**: Higher latency, lower availability
+  - **Use Cases**: Banking, inventory management (ACID properties required)
+- **Eventual Consistency**: Lower latency, higher availability
+  - **Use Cases**: Social media feeds, content delivery
+
+#### Performance vs Consistency vs Cost
+- **High Performance + Strong Consistency** = Higher cost
+- **High Performance + Eventual Consistency** = Moderate cost
+- **Strong Consistency + Low Cost** = Lower performance
+
+### 1.4 System Architecture Design
+
+#### Essential Components
+- **Draw system components** with clear boundaries
+- **Show data flow** between services
+- **Identify service boundaries** and responsibilities
+- **Define APIs** between components
+
+### 1.5 Failure Scenarios & Mitigation
+
+#### Single Point of Failure (SPOF) Analysis
+- **Database Failure**: Use replicas and automatic failover
+- **Cache Failure**: Implement fallback to database
+- **Region Failure**: Multi-region deployment with DNS failover
+- **Network Partition**: Retry with exponential backoff + idempotency keys
+- **Service Failure**: Circuit breaker pattern + graceful degradation
+
+#### Monitoring & Observability
+- **Early Detection**: Comprehensive monitoring and alerting
+- **Health Checks**: Service and dependency monitoring
+- **Metrics**: Error rates, latency, throughput
+- **Logging**: Structured logging for debugging
+
+### 1.6 Fundamental Concepts
+
+#### ACID Properties
+- **Atomicity**: All-or-nothing transactions (complete success or complete rollback)
+- **Consistency**: Database transitions from one valid state to another
+- **Isolation**: Concurrent transactions execute independently without interference
+- **Durability**: Committed transactions persist even after hardware failure
+
+#### BASE Properties (NoSQL Alternative)
+- **Basically Available**: System guarantees availability even during failures
+- **Soft State**: System state may change over time without explicit input
+- **Eventual Consistency**: System will become consistent over time through replication
+
+#### CAP Theorem
+**You can only guarantee 2 out of 3:**
+
+- **Consistency + Partition Tolerance**: Every read receives the latest write or error
+  - **Examples**: Traditional RDBMS in single-region
+  - **Trade-off**: Reduced availability during network partitions
+
+- **Availability + Partition Tolerance**: Every read responds with data (no errors)
+  - **Examples**: DynamoDB, Cassandra
+  - **Trade-off**: May return stale data during network partitions
+
+- **Consistency + Availability**: Perfect for systems without network partitions
+  - **Reality**: Network partitions are inevitable in distributed systems
+
+#### Real-World CAP Examples
+| System | Choice | Trade-off |
+|--------|--------|-----------|
+| **Banking** | CP | Prefer consistency over availability |
+| **Social Media** | AP | Prefer availability over consistency |
+| **E-commerce Cart** | AP | Prefer availability (eventual consistency OK) |
+| **Payment Processing** | CP | Prefer consistency (critical for money) |
 
 ## 2. Database Design ✅
 
@@ -194,12 +291,144 @@
 - [ ] Pulsar / RabbitMQ comparisons
 - [ ] Failure handling, retries, backpressure
 
-## 7. API & Communication Patterns
-*Topics to be covered:*
-- [ ] REST vs gRPC (synchronous), WebSockets / SSE (real-time)
-- [ ] Streaming patterns: client → server, server → client, bi-directional
-- [ ] Trade-offs: latency, scalability, browser-friendliness, type-safety
-- [ ] Protocol decisions for internal vs external clients
+## 7. API & Communication Patterns ✅
+
+### 7.1 Communication Protocol Overview
+
+#### REST
+- **Standard**: Exposing web APIs over HTTP using JSON
+- **Methods**: 
+  - **Idempotent**: GET, PUT (complete replacement), DELETE
+  - **Non-idempotent**: POST, PATCH
+- **Pros**: Human readable, easy to debug
+- **Use Cases**: Standard web APIs, CRUD operations
+
+#### gRPC
+- **Built on**: HTTP/2, supports multiplexing and streaming
+- **Benefits**: 
+  - Binary format (compact and efficient)
+  - Strongly typed (Protobuf schema)
+  - Bidirectional streaming
+  - Best for microservice-to-microservice communication
+- **Cons**: 
+  - Harder to debug (binary data)
+  - Browser support limitations
+- **Use Cases**: Performance-sensitive applications, internal services
+
+#### WebSockets
+- **Connection**: Persistent TCP connection between client and server
+- **Process**: Client upgrades HTTP connection to TCP for bidirectional messaging
+- **Benefits**:
+  - Low latency (connection established once)
+  - Real-time bidirectional communication
+- **Cons**:
+  - Harder to scale (long-lived connections)
+  - Special handling required for load balancers and firewalls
+- **Use Cases**: Real-time chat, stock trading apps, multiplayer games
+- **Note**: Server typically supports 50K-200K concurrent TCP connections
+
+#### Server-Sent Events (SSE)
+- **Direction**: Unidirectional (server → client) over HTTP
+- **Process**: Client subscribes via HTTP request
+- **Benefits**:
+  - Lightweight compared to WebSockets
+  - Built-in reconnect/retry mechanism
+  - Simpler than WebSockets
+  - UTF-8 text support (text/event-stream)
+- **Cons**:
+  - Unidirectional only
+  - Less flexible than WebSockets
+- **Use Cases**: Notifications, feeds, dashboards
+
+#### HTTP Long-Polling
+- **Process**: Client sends request, server keeps it open until new data arrives or timeout
+- **Built on**: HTTP/1.1 with immediate reconnection
+- **Cons**:
+  - Inefficient (TCP handshakes every time)
+  - HTTP header overhead
+  - Higher latency than WebSockets/SSE
+  - Resource wasteful when no data available
+
+### 7.2 Connection Recovery Strategies
+
+#### Client Restarts
+- Existing connections dropped
+- Client must re-establish connections (gRPC, WebSockets, SSE)
+- In-progress streams lost
+- Idempotent requests can be safely retried
+
+#### Server Restarts
+- All active client connections terminated
+- Clients should implement retry with exponential backoff
+- Server recovery time affects reconnection success
+
+### 7.3 Streaming Patterns
+
+#### Communication Directions
+- **Client → Server**: REST, gRPC unidirectional
+- **Server → Client**: gRPC unidirectional, Server-Sent Events, HTTP Long-Polling
+- **Bidirectional**: gRPC bidirectional streaming, WebSockets
+
+### 7.4 Protocol Selection Trade-offs
+
+#### 1. Latency Analysis
+- **REST**: Higher latency (HTTP overhead per request/response)
+- **gRPC**: Lower latency (HTTP/2 multiplexing + binary Protobuf)
+- **WebSockets**: Very low latency (persistent duplex connection)
+- **SSE**: Low latency push (text-only, unidirectional)
+- **Long-polling**: Highest latency (depends on re-requests and wasted cycles)
+
+#### 2. Scalability Characteristics
+- **REST**: Easiest to scale horizontally (stateless nature)
+- **gRPC**: Scalable, but long-lived streams consume resources
+  - Requires connection load balancing (e.g., Envoy)
+- **WebSockets**: Harder to scale
+  - Millions of long-lived connections need stateful load balancers or sticky sessions
+- **SSE**: One TCP connection per client (simpler than WebSockets but still resource-intensive)
+- **Long-polling**: Worst scalability (half-open requests + repeated handshakes)
+
+#### 3. Browser-Friendliness
+- **REST**: Natively supported everywhere
+- **gRPC**: Needs special tooling for browsers (gRPC-Web)
+- **SSE**: Native EventSource API in browsers (super easy)
+- **WebSockets**: Native WebSocket API in browsers
+- **Long-polling**: Works everywhere (good fallback for legacy)
+
+#### 4. Type Safety
+- **REST**: JSON/XML (human-readable but weakly typed, schema drift issues)
+- **gRPC**: Strong type safety via Protobuf (enforced schema contract)
+- **SSE**: Text-only (schema validation handled in app layer)
+- **WebSockets**: No schema enforcement (define your own protocol on top)
+- **Long-polling**: Same as REST (depends on payload format)
+
+### 7.5 Protocol Decision Matrix
+
+#### Internal APIs (Service-to-Service)
+**Prefer gRPC for:**
+- ✅ Strong typing (Protobuf schema contract)
+- ✅ Low latency (HTTP/2 multiplexing)
+- ✅ Great for microservices architecture
+- ✅ Streaming capabilities (client, server, bidirectional)
+
+#### External APIs (Browser/Mobile Clients)
+**Choose based on use case:**
+
+- **REST**: CRUD-style operations, request/response patterns
+- **SSE**: Notifications, real-time feeds, dashboards
+- **WebSockets**: Chats, gaming, collaborative editing
+- **Long-polling**: Fallback when SSE/WebSockets not available
+
+#### Quick Reference Table
+
+| Factor | REST | gRPC | WebSockets | SSE | Long-Polling |
+|--------|------|------|------------|-----|--------------|
+| **Latency** | High | Low | Very Low | Low | Highest |
+| **Scalability** | Excellent | Good* | Challenging | Good | Poor |
+| **Browser Support** | Native | gRPC-Web | Native | Native | Universal |
+| **Type Safety** | Weak | Strong | None | Weak | Weak |
+| **Connection** | Stateless | Stateful | Stateful | Stateful | Semi-stateful |
+
+*Requires proper load balancing for streams
 
 ## 8. High-Concurrency Systems
 *Topics to be covered:*
@@ -233,12 +462,13 @@
 ---
 
 ## Progress Tracker
+- [x] **HLD Foundations** - Complete
 - [x] **Database Design** - Complete
 - [ ] **API Design** - Pending
 - [ ] **Database Comparisons** - Pending
 - [ ] **Transactions & Concurrency** - Pending
 - [ ] **Messaging / Event Systems** - Pending
-- [ ] **API & Communication Patterns** - Pending
+- [x] **API & Communication Patterns** - Complete
 - [ ] **High-Concurrency Systems** - Pending
 - [ ] **Streaming / Media Systems** - Pending
 - [ ] **System Migration** - Pending
